@@ -43,10 +43,23 @@ export const BAND_COLOR: Record<RiskBand, string> = {
   CRITICAL: 'var(--critical)',
 };
 
-export function Meter({ pct, band }: { pct: number; band: RiskBand }) {
+/**
+ * Colour alone never carries the value: the bar is exposed as a labelled
+ * progressbar so assistive technology and colour-blind readers get the number
+ * and the band, not just a hue.
+ */
+export function Meter({ pct, band, label }: { pct: number; band: RiskBand; label?: string }) {
+  const value = Math.max(0, Math.min(100, pct));
   return (
-    <div className="meter" role="presentation">
-      <span style={{ width: `${Math.max(2, Math.min(100, pct))}%`, background: BAND_COLOR[band] }} />
+    <div
+      className="meter"
+      role="progressbar"
+      aria-valuenow={value}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={label ?? `${value} of 100, ${band}`}
+    >
+      <span style={{ width: `${Math.max(2, value)}%`, background: BAND_COLOR[band] }} />
     </div>
   );
 }

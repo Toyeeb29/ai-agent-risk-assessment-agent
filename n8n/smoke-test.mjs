@@ -2,7 +2,14 @@
  * Posts a synthetic scenario to your self-hosted n8n webhook and prints a summary.
  *
  *   node n8n/smoke-test.mjs <webhook-url> [scenario-id]
+ *   node n8n/smoke-test.mjs <webhook-url> [scenario-id] --compare
  *   npm run smoke -- <webhook-url> [scenario-id]
+ *
+ * --compare runs the SAME assessment twice against the live workflow and prints the
+ * two results side by side. The LLM stages are non-deterministic, so the finding count
+ * usually differs between runs. The risk score cannot differ, because no model output
+ * reaches it. That contrast is the project's central claim, demonstrated rather than
+ * asserted - and it needs no shell piping, which Git Bash on Windows handles badly.
  *
  * Why this exists instead of a curl command: pasting multi-line JSON into a shell
  * is the single most common way to "break" this workflow that has nothing to do
@@ -22,11 +29,14 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const scenarios = JSON.parse(readFileSync(join(HERE, '..', 'src/data/scenarios.json'), 'utf8'));
 
-const url = process.argv[2];
-const scenarioId = process.argv[3] || 'support-agent';
+const argv = process.argv.slice(2);
+const COMPARE = argv.includes('--compare');
+const positional = argv.filter((a) => !a.startsWith('--'));
+const url = positional[0];
+const scenarioId = positional[1] || 'support-agent';
 
 if (!url) {
-  console.error('\nUsage: node n8n/smoke-test.mjs <webhook-url> [scenario-id]\n');
+  console.error('\nUsage: node n8n/smoke-test.mjs <webhook-url> [scenario-id] [--compare]\n');
   console.error('  scenario-id: ' + scenarios.map((s) => s.id).join(' | '));
   console.error('\nExample:');
   console.error('  node n8n/smoke-test.mjs http://localhost:5678/webhook-test/ai-risk-assessment\n');
@@ -41,70 +51,132 @@ if (!scenario) {
 
 const isTestUrl = url.includes('/webhook-test/');
 
+/* -------------------------------------------------------------- one request */
+
+/** Posts the scenario once and returns { body, elapsed }. Exits on failure. */
+async function runOnce(label) {
+  if (label) console.log(`\n  ${label}`);
+  const started = Date.now();
+
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(scenario.input),
+      signal: AbortSignal.timeout(180_000),
+    });
+  } catch (err) {
+    console.error(`  Could not reach n8n: ${err.message}`);
+    console.error('  Check that n8n is running and the URL host/port are correct.\n');
+    process.exit(1);
+  }
+
+  const elapsed = ((Date.now() - started) / 1000).toFixed(1);
+  const text = await res.text();
+
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    console.error(`  HTTP ${res.status} - response was not JSON:\n`);
+    console.error(text.slice(0, 600));
+    process.exit(1);
+  }
+
+  if (res.status === 404 && /not registered/i.test(body.message || '')) {
+    console.error('  HTTP 404 - the test webhook is not listening.\n');
+    console.error('  Fix: on the n8n canvas click "Execute workflow" (bottom centre),');
+    console.error('  wait for "Waiting for trigger event", then run this command again.');
+    console.error('  A test webhook accepts ONE request per click.\n');
+    process.exit(1);
+  }
+
+  if (!res.ok) {
+    console.error(`  HTTP ${res.status}: ${body.error || body.message || 'request failed'}`);
+    if (Array.isArray(body.details)) body.details.forEach((d) => console.error(`    - ${d}`));
+    console.error('');
+    process.exit(1);
+  }
+
+  if (!body.risk || !body.assessment_id) {
+    console.error('  n8n responded, but the payload is not an AssessmentResult.');
+    console.error('  Check the output of the "Assemble Final Assessment" node.\n');
+    console.error(JSON.stringify(body, null, 2).slice(0, 800));
+    process.exit(1);
+  }
+
+  return { body, elapsed };
+}
+
+/* ---------------------------------------------------------- compare mode */
+
+if (COMPARE) {
+  console.log(`\n  DETERMINISM CHECK`);
+  console.log(`  ${scenario.label}`);
+  console.log(`  Two live runs of the same input against ${url}`);
+  console.log('\n  This takes 2-3 minutes - each run is a full pass through the workflow.');
+
+  const a = await runOnce('Run 1 of 2 - submitting...');
+  const b = await runOnce('Run 2 of 2 - submitting...');
+
+  const fmt = (v) => String(v).padStart(9);
+  const row = (label, x, y) => console.log(`  ${label.padEnd(22)}${fmt(x)}${fmt(y)}`);
+
+  console.log('\n  ' + '-'.repeat(42));
+  console.log(`  ${''.padEnd(22)}${fmt('Run 1')}${fmt('Run 2')}`);
+  console.log('  ' + '-'.repeat(42));
+  row('Findings (by model)', a.body.findings.length, b.body.findings.length);
+  row('Risk score', `${a.body.risk.score}/64`, `${b.body.risk.score}/64`);
+  row('Band', a.body.risk.band, b.body.risk.band);
+  row(
+    'I x L x E',
+    `${a.body.risk.factors.impact.value}x${a.body.risk.factors.likelihood.value}x${a.body.risk.factors.exposure.value}`,
+    `${b.body.risk.factors.impact.value}x${b.body.risk.factors.likelihood.value}x${b.body.risk.factors.exposure.value}`
+  );
+  row(
+    'Control gaps',
+    a.body.control_gaps.filter((c) => c.status === 'GAP').length,
+    b.body.control_gaps.filter((c) => c.status === 'GAP').length
+  );
+  console.log('  ' + '-'.repeat(42));
+
+  const scoreStable = a.body.risk.score === b.body.risk.score && a.body.risk.band === b.body.risk.band;
+  const modelVaried = a.body.findings.length !== b.body.findings.length;
+
+  console.log('');
+  if (scoreStable) {
+    console.log('  Risk score identical across both runs.');
+    console.log(
+      modelVaried
+        ? '  Model output differed. The score did not, because no model output reaches it.'
+        : '  Model output happened to match this time; run again to see it vary.'
+    );
+  } else {
+    console.log('  SCORE DIFFERED BETWEEN RUNS - this should be impossible.');
+    console.log('  Check that no LLM node feeds the Deterministic Risk Engine.');
+  }
+  console.log(`\n  Assessment IDs: ${a.body.assessment_id} / ${b.body.assessment_id}\n`);
+  process.exit(scoreStable ? 0 : 1);
+}
+
+/* ----------------------------------------------------------- single report */
+
 console.log(`\n  POST   ${url}`);
 console.log(`  Case   ${scenario.label}`);
 if (isTestUrl) {
   console.log('  Note   Test URL detected - the workflow must be listening.');
   console.log('         Click "Execute workflow" on the n8n canvas first, then re-run this.');
 }
-console.log('\n  Waiting for n8n (the workflow runs 5-6 sequential LLM calls)...\n');
+console.log('\n  Waiting for n8n (the workflow runs 5-6 sequential LLM calls)...');
 
-const started = Date.now();
-let res;
-try {
-  res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(scenario.input),
-    signal: AbortSignal.timeout(180_000),
-  });
-} catch (err) {
-  console.error(`  Could not reach n8n: ${err.message}`);
-  console.error('  Check that n8n is running and the URL host/port are correct.\n');
-  process.exit(1);
-}
-
-const elapsed = ((Date.now() - started) / 1000).toFixed(1);
-const text = await res.text();
-
-let body;
-try {
-  body = JSON.parse(text);
-} catch {
-  console.error(`  HTTP ${res.status} - response was not JSON:\n`);
-  console.error(text.slice(0, 600));
-  process.exit(1);
-}
-
-if (res.status === 404 && /not registered/i.test(body.message || '')) {
-  console.error('  HTTP 404 - the test webhook is not listening.\n');
-  console.error('  Fix: on the n8n canvas click "Execute workflow" (bottom centre),');
-  console.error('  wait for "Waiting for trigger event", then run this command again.');
-  console.error('  A test webhook accepts ONE request per click.\n');
-  process.exit(1);
-}
-
-if (!res.ok) {
-  console.error(`  HTTP ${res.status}: ${body.error || body.message || 'request failed'}`);
-  if (Array.isArray(body.details)) body.details.forEach((d) => console.error(`    - ${d}`));
-  console.error('');
-  process.exit(1);
-}
-
-if (!body.risk || !body.assessment_id) {
-  console.error('  n8n responded, but the payload is not an AssessmentResult.');
-  console.error('  Check the output of the "Assemble Final Assessment" node.\n');
-  console.error(JSON.stringify(body, null, 2).slice(0, 800));
-  process.exit(1);
-}
-
-/* ------------------------------------------------------------------ report */
+const { body, elapsed } = await runOnce();
 
 const r = body.risk;
 const gaps = body.control_gaps.filter((c) => c.status === 'GAP').length;
 const missing = body.evidence_gaps.filter((e) => e.status === 'MISSING').length;
 
-console.log(`  ASSESSMENT COMPLETE in ${elapsed}s\n`);
+console.log(`\n  ASSESSMENT COMPLETE in ${elapsed}s\n`);
 console.log(`  ${body.system.name}`);
 console.log(`  ${body.assessment_id}\n`);
 console.log(`  Risk score        ${r.score} / ${r.max_score}   ${r.band}`);

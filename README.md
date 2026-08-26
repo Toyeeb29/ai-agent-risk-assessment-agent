@@ -11,7 +11,10 @@ Orchestrated end to end by **self-hosted n8n**.
 
 `Self-Hosted n8n` · `Agentic AI` · `AI Governance` · `GRC` · `NIST AI RMF` · `TPRM` · `Risk Automation`
 
-![The case study front page](docs/images/portfolio-hero.png)
+![Assessment results](docs/images/results-overview.png)
+
+*A live assessment returned by self-hosted n8n. Assessment ID and timestamp come from
+the workflow, not the browser.*
 
 ---
 
@@ -33,6 +36,12 @@ Here is the same AI system, assessed twice, against a live LLM:
 
 The model's output changed. The score did not, because nothing it returns can move it.
 That is the entire design, and `npm run engine:test` asserts it without spending a token.
+
+Reproduce it against your own n8n in one command:
+
+```bash
+node n8n/smoke-test.mjs <your-webhook-url> support-agent --compare
+```
 
 ---
 
@@ -63,7 +72,7 @@ to do, as readable Markdown. Neither is buried in an exported workflow blob — 
 [Architecture](#4-architecture) for why that was a deliberate choice.
 
 <details>
-<summary><strong>Full contents</strong> — 19 sections</summary>
+<summary><strong>Full contents</strong></summary>
 
 1. [Overview](#1-overview) · 2. [Problem](#2-problem) · 3. [Solution](#3-solution) ·
 4. [Architecture](#4-architecture) · 5. [Business value](#5-business-value) ·
@@ -72,8 +81,10 @@ to do, as readable Markdown. Neither is buried in an exported workflow blob — 
 10. [Control gaps](#10-control-gaps) · 11. [Evidence gaps](#11-evidence-gaps) ·
 12. [TPRM](#12-tprm) · 13. [Security](#13-security) · 14. [Self-hosted n8n](#14-self-hosted-n8n) ·
 15. [Installation](#15-installation) · 16. [Configuration](#16-configuration) ·
-17. [Demo](#17-demo) · 18. [Limitations](#18-limitations) ·
-19. [Future enhancements](#19-future-enhancements)
+17. [Demo](#17-demo) · [Adversarial test case](#17b-adversarial-test-case) ·
+[Local demo](#17c-local-demo) · 18. [Limitations](#18-limitations) ·
+19. [Future enhancements](#19-future-enhancements) ·
+20. [Interview talking points](#20-interview-talking-points)
 
 </details>
 
@@ -141,6 +152,8 @@ questions.
 
 ## 3. Solution
 
+![The case study front page](docs/images/portfolio-hero.png)
+
 A structured intake form posts to a self-hosted n8n webhook. The workflow runs
 fourteen stages across seventeen nodes, splitting the work along one line:
 
@@ -151,7 +164,6 @@ a technical position into business risk.
 **Deterministic rules do everything that has to be defended.** Risk score, risk band,
 every control status, every evidence status, every severity, every remediation
 priority and SLA, and whether the assessment requires human governance review.
-
 
 ## 4. Architecture
 
@@ -559,9 +571,13 @@ always produced live by n8n; there are no canned results in the application.
 
 | Scenario | Shape | Result |
 |---|---|---|
-| Autonomous customer support agent | Third-party LLM agent, write access to production ticketing and billing, no approval gate, PII in scope | 36/64 HIGH — requires governance review |
-| Semi-autonomous infrastructure agent | Internal agent with cloud write and delete permissions, self-classified approval | 27/64 HIGH — requires governance review |
-| Read-only internal policy assistant | Self-hosted retrieval assistant, no tools, human in the loop | 1/64 LOW — approve |
+| Read-only internal policy assistant | Self-hosted retrieval assistant, no tools, human in the loop | **1/64 LOW** — no blocking issues |
+| Semi-autonomous infrastructure agent | Internal agent with cloud write and delete permissions, self-classified approval | **27/64 HIGH** — requires governance review |
+| Autonomous customer support agent | Third-party LLM agent, write access to production ticketing and billing, no approval gate, PII in scope | **36/64 HIGH** — requires governance review |
+| Adversarial test case | Deliberately dangerous — see below | **64/64 CRITICAL** — do not approve |
+
+Four scenarios spanning 1 → 27 → 36 → 64 out of 64. `npm run engine:test` asserts that
+ordering, so a scoring change that collapses the spread fails the build.
 
 The support agent scores higher than the infrastructure agent despite better platform
 hygiene — secrets manager, restricted egress, comprehensive logging — because it is
@@ -580,6 +596,80 @@ The results screen shows the risk score with its full derivation, per-domain
 distribution, findings, the eleven agentic dimensions, control gaps, evidence gaps,
 the governance mapping table, the prioritised remediation plan, a nine-section
 executive report (downloadable as Markdown or printable to PDF), and the audit record.
+
+---
+
+## 17b. Adversarial test case
+
+A scoring model is only interesting if it responds to compounding risk. This scenario
+exists to prove it does — and to give the engine something it should refuse outright.
+
+**The configuration.** An agent with standing write *and delete* access to the production
+customer database, the billing platform and outbound email. It reads payment details and
+identity records, decides account actions itself, calls partner APIs, and emails customers
+directly. No approval gate on anything. Shared application role with the operations team.
+Credentials in the deployment config. Unrestricted egress. No logging of tool calls or agent
+reasoning. No monitoring beyond uptime. Third-party platform that trains on submitted data.
+250,000 people in scope.
+
+**Expected risk factors** — every one of the six agent risk modifiers at or near ceiling:
+
+| Modifier | Value | Driver |
+|---|---|---|
+| Autonomy | 4/4 | Fully autonomous, no approval gate |
+| Tool privilege | 4/4 | Modify + delete + transact + communicate |
+| Data sensitivity | 4/4 | Sensitive + personal data, vendor trains on it |
+| External exposure | 4/4 | External APIs, unrestricted egress, third-party host, outbound comms |
+| Human impact | 4/4 | Critical business impact, 250,000 users |
+| Third-party dependency | 4/4 | Vendor trains on data, high regulatory sensitivity |
+
+**What the engine actually returns** — run it yourself with
+`node n8n/smoke-test.mjs <webhook> adversarial`:
+
+```
+Risk score        64 / 64   CRITICAL
+Calculation       Impact 4 x Likelihood 4 x Exposure 4
+Decision          DO NOT APPROVE
+Control gaps      11  of 13
+Evidence missing  13  of 14
+Domains           Privacy 100 · Security 100 · Agentic 100 · TPRM 93 · Governance 100
+```
+
+Compare that against the read-only assistant at **1/64**. Same engine, same rules, no
+special-casing — the difference is entirely the authority the system holds and the
+oversight around it.
+
+The number was not tuned to land at 64. It is what `Impact × Likelihood × Exposure`
+produces when every factor is at its ceiling, which is the correct behaviour for a
+configuration this bad.
+
+---
+
+## 17c. Local demo
+
+The application is designed to run locally and connects to a self-hosted n8n environment
+that orchestrates the assessment workflow. **The public repository does not expose the
+underlying n8n instance, its webhook, or any credentials.**
+
+What that means in practice:
+
+- The demo runs on the operator's machine, against their own n8n. There is no hosted
+  endpoint and no public API.
+- All demo scenarios use synthetic data — fictional systems, owners and vendors. No real
+  customer, employee or vendor information appears anywhere in this repository.
+- Clone it, point `VITE_N8N_AI_RISK_WEBHOOK` at your own n8n, and it works identically.
+  You are running the system, not calling a service.
+
+**If n8n is unreachable, the application shows an error and no assessment:**
+
+> Assessment service unavailable. Could not reach the self-hosted n8n instance at
+> `<host>`. Verify that n8n is running, that the workflow is published, and that this
+> origin is allowed by the webhook's CORS configuration. No assessment is produced when
+> the workflow is unreachable — this application has no fallback results.
+
+There is deliberately no offline mode, no cached result and no sample response wired into
+the UI. A governance tool that invents an assessment when its backend is down is worse
+than one that fails.
 
 ---
 
@@ -628,3 +718,110 @@ governance review. Framework mappings are illustrative and do not constitute
 certification of compliance with NIST AI RMF, ISO/IEC 42001, or any other standard.
 All findings require validation against evidence before an approval decision. Demo
 data is synthetic.
+
+---
+
+## 20. Interview talking points
+
+Concise answers, all grounded in what the repository actually does.
+
+**Why did you build this?**
+Because GRC teams are being handed AI agents to approve faster than they can assess them,
+and the first pass is mostly clerical — transcribe the questionnaire, look up the same
+controls, remember what evidence to request, rewrite it in business language. That work is
+repetitive and judgement-light, which makes it the right thing to automate. The judgement
+itself stays with a person.
+
+**Why n8n?**
+The workflow is the artefact. A GRC reviewer can look at seventeen labelled nodes and see
+the assessment pipeline without reading code, which matters when the people who need to
+trust the process are not engineers. It also gives execution history, retries and
+credential isolation without me building any of it.
+
+**Why self-hosted n8n?**
+Assessment intake describes internal systems, data flows and control weaknesses — that is
+sensitive material about the organisation's own security posture. Self-hosting keeps it
+inside the boundary, keeps the LLM credential in an instance I control, and means there is
+no third-party processor in the assessment path itself.
+
+**Why use AI agents at all?**
+For the part a rules engine cannot do: reasoning about what could go wrong with *this*
+specific combination of capabilities. A rule knows the agent can call a billing API. The
+model works out that a crafted support ticket could talk it into issuing a credit. It also
+handles translation into business language, which is genuinely hard to template.
+
+**Why not let the LLM calculate the risk?**
+Reproducibility, defensibility, auditability. Two analysts assessing the same system must
+get the same answer. When a business owner disputes a HIGH, I have to show arithmetic, not
+intuition. And a scoring change should be a reviewable code change with a version number
+in the audit record — not a different mood on a different day.
+
+**How does the deterministic risk engine work?**
+`Risk = Impact × Likelihood × Exposure`, each factor 1–4, range 1–64. The factors derive
+from six agent risk modifiers computed at intake (autonomy, tool privilege, data
+sensitivity, external exposure, human impact, third-party dependency) plus a published
+control-weakness score. Every weight and threshold is in `docs/RISK_METHODOLOGY.md`.
+
+**How do you prevent hallucinated risk scores?**
+The model never touches a score. Beyond that: an AI-generated severity is capped at one
+band above the deterministic band, so a model cannot declare CRITICAL on a LOW system;
+framework references come from a fixed catalog and are rebuilt from that catalog during
+assembly; and valid JSON of the wrong shape degrades to `UNKNOWN` rather than becoming
+invented content.
+
+**How do you handle agentic AI risk?**
+A dedicated stage assesses eleven dimensions: agent identity, authorization, tool access,
+least privilege, autonomy, human oversight, prompt injection, tool abuse, auditability,
+monitoring and failure handling. Each returns ADEQUATE / WEAK / ABSENT / UNKNOWN. `UNKNOWN`
+is first-class — "not described at intake" becomes an evidence request rather than an
+assumption.
+
+**How would you secure this in production?**
+The webhook is unauthenticated today, which is documented as an accepted residual risk. In
+production: a server-side proxy holding a shared secret, origin allowlist locked to one
+domain, reverse-proxy rate limiting, SSO for internal users, and the audit record persisted
+to a system of record rather than returned to the browser. The full analysis is in
+`docs/SECURITY.md`.
+
+**How would you integrate this with ServiceNow, OneTrust or another GRC platform?**
+The workflow already emits a structured `AssessmentResult` with a stable schema version.
+Integration is one additional n8n node before the response: map findings to the platform's
+issue model, evidence gaps to tasks with owners, and the audit record to an assessment
+object. n8n has connectors for most of these, which is part of why it was the right
+orchestrator.
+
+**How would you integrate this into CI/CD?**
+The deterministic engine is dependency-free JavaScript that runs outside n8n — that is what
+`npm run engine:test` does. A pipeline step could score an agent manifest on every change
+and fail the build when the band crosses a threshold or a CRITICAL control gap appears.
+The LLM stages would be skipped in CI; they add narrative, not gating signal.
+
+**How would you collect evidence automatically?**
+This is the highest-value extension and the honest answer to the tool's main weakness. The
+evidence catalog already names each artefact and its owner; the next step is replacing
+"ask" with "fetch" — read the actual IAM policy, logging configuration and egress rules
+from the cloud provider and evaluate those instead of the intake's claims about them.
+
+**How would you scale the workflow?**
+Assessments are independent and stateless, so this scales horizontally with n8n workers.
+The real constraint is LLM latency, not throughput — five to six sequential calls. Batch
+intake would run assessments in parallel rather than making any single one faster.
+
+**What happens if the LLM is unavailable?**
+The assessment still completes. Each LLM node is set to continue on error, the assembly
+node parses defensively, and any stage that fails is recorded in `degraded_stages`. The
+score, control gaps, evidence list and SLAs are byte-identical to a clean run — the
+contract test asserts exactly that against a run where every model returns garbage.
+
+**What happens if the AI gives an incorrect recommendation?**
+It reaches a human, which is the point. Every finding is tagged `ai` or `deterministic` so a
+reviewer knows which claims are rule-derived and which are model judgement. The model
+cannot escalate severity beyond one band, cannot invent a control ID, and cannot change the
+approval decision. A wrong recommendation is a wrong sentence in a draft, not a wrong
+governance outcome.
+
+**Where does human oversight occur?**
+At the decision. The workflow never approves anything — `APPROVE` means "the automated pass
+found no blocking issues", and a person still records the determination. Human review is
+mandatory by rule when the band is HIGH or CRITICAL, when any CRITICAL control gap exists,
+when regulatory sensitivity is high, or when autonomy ≥ 3 with tool privilege ≥ 2.

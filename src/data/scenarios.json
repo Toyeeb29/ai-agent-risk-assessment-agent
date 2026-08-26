@@ -158,5 +158,64 @@
       "third_party": true,
       "vendor_name": "Anthropic (via internal gateway)"
     }
+  },
+  {
+    "id": "adversarial",
+    "label": "Adversarial test case (worst plausible)",
+    "blurb": "A deliberately dangerous configuration used to prove the engine responds to compounding risk. Every agent risk modifier is at or near its ceiling.",
+    "input": {
+      "schema_version": "1.0.0",
+      "system_name": "Helios Autonomous Operations Agent",
+      "business_owner": "Unassigned - requested by Growth Engineering",
+      "department": "Growth Engineering",
+      "business_purpose": "Automate the full customer lifecycle: onboarding, account changes, billing adjustments, retention outreach and offboarding, without analyst involvement.",
+      "description": "An agent with standing write access to the production customer database, the billing platform and the outbound email system. It reads customer records including payment details and support history, decides on account actions itself, calls partner APIs to provision and deprovision services, and emails customers directly. It has no approval gate on any action, runs continuously, and shares an application role with the operations team. Credentials are held in the deployment configuration. Outbound network access is unrestricted so the agent can reach any partner API without a change request. No logging of tool calls or agent reasoning is in place, and no monitoring exists beyond uptime checks.",
+      "ai_type": "ai_agent",
+      "model_provider": "Third-party agent platform, model not disclosed",
+      "hosting": "third_party",
+      "data_processed": [
+        "Customer payment details",
+        "Customer identity records",
+        "Support and complaint history",
+        "Contract and pricing data",
+        "Partner API credentials"
+      ],
+      "sensitive_data": true,
+      "personal_information": true,
+      "training_data_usage": "vendor_trains_on_data",
+      "is_agent": true,
+      "tool_access": true,
+      "tools": [
+        "Production customer database (read/write/delete)",
+        "Billing platform (charge, refund, cancel)",
+        "Outbound email to customers",
+        "Partner provisioning APIs",
+        "Internal admin console"
+      ],
+      "can_read_data": true,
+      "can_modify_data": true,
+      "can_delete_data": true,
+      "can_send_communications": true,
+      "can_execute_transactions": true,
+      "can_call_external_apis": true,
+      "autonomy": "fully_autonomous",
+      "human_approval": "never",
+      "authentication": "shared_api_key",
+      "authorization": "shared_role",
+      "logging": "none",
+      "monitoring": "none",
+      "secrets_management": "hardcoded",
+      "network_access": "unrestricted_internet",
+      "business_impact": "critical",
+      "affected_users": 250000,
+      "regulatory_sensitivity": "high",
+      "regulatory_context": [
+        "GDPR",
+        "PCI DSS",
+        "CCPA"
+      ],
+      "third_party": true,
+      "vendor_name": "Helios Agents Inc."
+    }
   }
 ]

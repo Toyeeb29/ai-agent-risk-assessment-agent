@@ -172,6 +172,27 @@ assert(
   ['HIGH', 'CRITICAL'].includes(results['support-agent'].band),
   results['support-agent'].band
 );
+assert(
+  'the adversarial configuration scores above every other scenario',
+  results['adversarial'].score > Math.max(
+    results['support-agent'].score,
+    results['devops-agent'].score,
+    results['internal-assistant'].score
+  ),
+  String(results['adversarial'].score)
+);
+assert(
+  'the adversarial configuration is CRITICAL',
+  results['adversarial'].band === 'CRITICAL',
+  results['adversarial'].band
+);
+assert(
+  'the four scenarios are strictly ordered - the engine discriminates',
+  results['internal-assistant'].score < results['devops-agent'].score &&
+    results['devops-agent'].score < results['support-agent'].score &&
+    results['support-agent'].score < results['adversarial'].score,
+  `${results['internal-assistant'].score} < ${results['devops-agent'].score} < ${results['support-agent'].score} < ${results['adversarial'].score}`
+);
 
 /* --------------------------------------------- malformed input handling */
 

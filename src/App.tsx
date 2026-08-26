@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { AssessmentInput, AssessmentResult } from './types';
 import { EMPTY_INPUT } from './data/formSchema';
 import scenarios from './data/scenarios.json';
@@ -9,8 +9,9 @@ import ProblemSection from './components/ProblemSection';
 import ArchitectureSection from './components/ArchitectureSection';
 import AssessmentForm from './components/AssessmentForm';
 import Results from './components/Results';
+import AssessmentProgress from './components/AssessmentProgress';
 import ValueAndSecurity from './components/ValueAndSecurity';
-import { Card, Section } from './components/ui';
+import { Section } from './components/ui';
 
 const NAV = [
   ['Problem', '#problem'],
@@ -19,15 +20,6 @@ const NAV = [
   ['Business value', '#value'],
   ['Security', '#security'],
 ];
-
-function ElapsedTimer() {
-  const [s, setS] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setS((x) => x + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-  return <span className="mono">{s}s</span>;
-}
 
 export default function App() {
   const [input, setInput] = useState<AssessmentInput>(() => scenarios[0].input as AssessmentInput);
@@ -114,19 +106,10 @@ export default function App() {
         </div>
 
         <div ref={resultsRef} style={{ scrollMarginTop: 76 }}>
-          {busy && (
-            <Card className="tight" >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-                <span className="spinner" />
-                <span style={{ fontSize: '0.9rem' }}>
-                  Waiting for n8n at <span className="mono">{webhookHost()}</span> — <ElapsedTimer />
-                </span>
-              </div>
-              <p style={{ margin: '10px 0 0', fontSize: '0.83rem', color: 'var(--text-dim)' }}>
-                The workflow runs its LLM stages in sequence, then the deterministic engine. The stages that
-                actually completed are listed in the audit record once it returns.
-              </p>
-            </Card>
+          {(busy || result) && (
+            <div style={{ marginTop: busy ? 0 : 34 }}>
+              <AssessmentProgress running={busy} result={result} host={webhookHost()} />
+            </div>
           )}
 
           {error && (

@@ -18,6 +18,30 @@ untrusted for the entire length of the workflow, including inside prompts.
 
 ---
 
+## Prototype controls vs production recommendations
+
+This project is a **prototype**. It is not production compliant and makes no such claim.
+The table separates what is actually implemented here from what a production deployment
+would additionally require, so neither is mistaken for the other.
+
+| Area | Implemented in this prototype | Production would additionally require |
+|---|---|---|
+| Endpoint auth | None — public webhook, origin allowlist only | Server-side proxy with a shared secret; SSO for internal users |
+| Rate limiting | None in the repository | Reverse-proxy limits, per-IP and global |
+| Transport | HTTPS to n8n; no cookies, no credentials sent | TLS termination with a managed certificate, HSTS |
+| Secrets | LLM credential in n8n's store; nothing in the repo or browser | External secrets manager, scheduled rotation |
+| Input validation | Full — required fields, enum allowlists, control-character stripping, clamping | Unchanged |
+| Output validation | Full — defensive parsing, severity capping, no model-generated citations | Unchanged |
+| Data | Synthetic demo data only | Data classification at intake; minimisation before the model |
+| Audit | Assessment ID, fingerprint, stage list returned in the response | Persisted to a GRC system of record; immutable storage |
+| Authorisation | None — single user | Separation of duties: requester, reviewer, approver |
+| Availability | Single self-hosted instance | Queue mode, worker redundancy, monitored |
+
+Everything in the middle column is real and verifiable in this repository. Everything in
+the right column is unbuilt, and is listed so the gap is explicit rather than implied.
+
+---
+
 ## Controls
 
 ### No secrets in the frontend
@@ -81,6 +105,48 @@ So:
 - the model can never emit a control ID or framework reference — those come from a
   fixed catalog, and the assembly node rebuilds every mapping from the catalog
 - `degraded_stages` in the audit record names any stage whose output was rejected
+
+### LLM data handling
+
+What actually reaches the model provider, stated precisely because "we use AI" is not a
+data-flow description:
+
+**Sent to the model.** The normalised intake object — system name, owner, department,
+business purpose, description, the AI and agentic capability flags, the security control
+selections, and the governance fields. Plus, for later stages, the deterministic outputs:
+control statuses, evidence statuses, risk factors and the computed score.
+
+**Not sent to the model.** Nothing else. The workflow holds no other data. There is no
+document upload, no database connection, no retrieval over internal content, and no
+customer or employee records anywhere in the system.
+
+**Retention.** Governed by the provider's terms for the configured credential, which is
+outside this project's control — which is exactly why the intake asks about
+`training_data_usage` and why `unknown` is treated as a risk driver rather than a neutral
+answer. The workflow itself persists nothing.
+
+**Minimisation.** In the demo, intake is synthetic, so minimisation is not exercised. In a
+real deployment the correct control is to classify intake at submission and strip or
+tokenise anything that does not need to reach the model — the description field is the
+realistic leak path, since a requester may paste architecture detail into it.
+
+### n8n operational security
+
+- **Self-hosted.** The instance is operated by the assessment owner. Intake describes
+  internal systems and control weaknesses, which is sensitive material about the
+  organisation's own posture — it should not transit a third-party automation platform.
+- **Credential isolation.** The LLM credential lives in n8n's encrypted credential store
+  and is referenced by ID. The generated workflow JSON ships with no credential block at
+  all, so importing it cannot leak one.
+- **Workflow permissions.** The workflow holds no credential other than the model
+  provider's. It has no database, cloud, filesystem or mailbox access.
+- **Execution logging.** n8n retains execution history including per-node input and output.
+  That history contains the full intake, so the instance itself is in scope for whatever
+  data classification the intake carries — treat it as an assessment system of record, not
+  as scratch infrastructure.
+- **Access.** n8n's own authentication should be enabled and its UI should not be exposed
+  publicly. Publishing the workflow makes the webhook reachable; it does not make the
+  editor reachable, and it should stay that way.
 
 ### Least privilege
 

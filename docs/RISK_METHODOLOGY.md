@@ -216,9 +216,16 @@ Produced by `npm run engine:test` against the three synthetic scenarios.
 
 | Scenario | I | L | E | Score | Band | Decision |
 |---|---|---|---|---|---|---|
-| Autonomous third-party support agent | 4 | 3 | 3 | **36 / 64** | HIGH | Requires governance review |
+| Read-only internal policy assistant | 1 | 1 | 1 | **1 / 64** | LOW | No blocking issues |
 | Semi-autonomous infrastructure agent | 3 | 3 | 3 | **27 / 64** | HIGH | Requires governance review |
-| Read-only internal policy assistant | 1 | 1 | 1 | **1 / 64** | LOW | Approve |
+| Autonomous third-party support agent | 4 | 3 | 3 | **36 / 64** | HIGH | Requires governance review |
+| Adversarial test case | 4 | 4 | 4 | **64 / 64** | CRITICAL | Do not approve |
+
+The adversarial case is the ceiling: every one of the six modifiers at 4/4, eleven of
+thirteen controls in GAP, thirteen of fourteen evidence artefacts missing. It is included
+precisely because a scoring model that cannot reach its own ceiling on a genuinely terrible
+configuration is not calibrated. The engine test asserts the four scenarios stay strictly
+ordered, so a weight change that collapses the spread fails the build.
 
 The support agent scores higher than the infrastructure agent despite better platform
 hygiene, because it is fully autonomous, touches personal data, and has no approval

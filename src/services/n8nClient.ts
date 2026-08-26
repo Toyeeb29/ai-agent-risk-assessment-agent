@@ -76,7 +76,10 @@ export async function runAssessment(input: AssessmentInput): Promise<AssessmentR
       );
     }
     throw new N8nRequestError(
-      `Could not reach n8n at ${webhookHost()}. Check that the workflow is Active and that your portfolio origin is allowed by the webhook's CORS configuration.`
+      `Assessment service unavailable. Could not reach the self-hosted n8n instance at ${webhookHost()}. ` +
+        `Verify that n8n is running, that the workflow is published, and that this origin is allowed by ` +
+        `the webhook's CORS configuration. No assessment is produced when the workflow is unreachable — ` +
+        `this application has no fallback results.`
     );
   }
   clearTimeout(timer);

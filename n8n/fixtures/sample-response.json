@@ -1,6 +1,6 @@
 {
-  "assessment_id": "AIRA-20260826-EEHHPW",
-  "generated_at": "2026-08-26T17:23:40.888Z",
+  "assessment_id": "AIRA-20260826-TOM82Y",
+  "generated_at": "2026-08-26T18:13:42.160Z",
   "schema_version": "1.0.0",
   "system": {
     "name": "Aurora Support Resolution Agent",
@@ -864,8 +864,8 @@
     "human_review_required": true
   },
   "audit_record": {
-    "assessment_id": "AIRA-20260826-EEHHPW",
-    "timestamp": "2026-08-26T17:23:40.888Z",
+    "assessment_id": "AIRA-20260826-TOM82Y",
+    "timestamp": "2026-08-26T18:13:42.160Z",
     "system": "Aurora Support Resolution Agent",
     "engine_version": "1.0.0",
     "schema_version": "1.0.0",

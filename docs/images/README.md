@@ -18,17 +18,27 @@ the image down.
 ## The determinism screenshot
 
 This is the most valuable image in the repo and the least obvious to capture.
-Run the same scenario twice and put the two terminal outputs next to each other:
+One command runs the same scenario twice and prints both results side by side:
 
 ```bash
-node n8n/smoke-test.mjs http://localhost:5678/webhook/ai-risk-assessment
-node n8n/smoke-test.mjs http://localhost:5678/webhook/ai-risk-assessment
+node n8n/smoke-test.mjs http://localhost:5678/webhook/ai-risk-assessment support-agent --compare
 ```
 
-The `Findings` count will differ between runs because the LLM stages are
-non-deterministic. `Risk score` and `Impact × Likelihood × Exposure` will not,
-because no model touches them. That contrast is the entire argument of the
-project in one image.
+```
+  ------------------------------------------
+                            Run 1    Run 2
+  ------------------------------------------
+  Findings (by model)          17       18
+  Risk score                36/64    36/64
+  Band                       HIGH     HIGH
+  I x L x E                 4x3x3    4x3x3
+  Control gaps                  7        7
+  ------------------------------------------
+```
+
+The `Findings` count differs because the LLM stages are non-deterministic. The score
+cannot differ, because no model output reaches it. That contrast is the entire argument
+of the project in one image. Takes 2-3 minutes — two full passes through the workflow.
 
 ## Before committing
 

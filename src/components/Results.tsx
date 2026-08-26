@@ -17,6 +17,95 @@ const TABS = [
 
 type Tab = (typeof TABS)[number];
 
+/** Plain-language meaning of each band, so the number is never the only signal. */
+const BAND_MEANING: Record<string, string> = {
+  LOW: 'No blocking issues found in the automated pass. A person still records the decision.',
+  MODERATE: 'Approvable with conditions. The identified gaps are addressable before deployment.',
+  HIGH: 'Requires human governance review before an approval decision can be made.',
+  CRITICAL: 'Should not be approved in its current configuration.',
+};
+
+const DECISION_LABEL: Record<string, string> = {
+  APPROVE: 'No blocking issues found',
+  APPROVE_WITH_CONDITIONS: 'Approve with conditions',
+  REQUIRES_GOVERNANCE_REVIEW: 'Requires governance review',
+  DO_NOT_APPROVE: 'Do not approve as configured',
+};
+
+/** Assessment identity — real values from n8n, never generated in the browser. */
+function IdentityHeader({ r }: { r: AssessmentResult }) {
+  const a = r.audit_record;
+  return (
+    <div className="ident">
+      <dl>
+        <div className="pair">
+          <dt>Assessment ID</dt>
+          <dd>{a.assessment_id}</dd>
+        </div>
+        <div className="pair">
+          <dt>Assessment date</dt>
+          <dd>
+            {new Date(r.generated_at).toLocaleDateString(undefined, {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </dd>
+        </div>
+        <div className="pair">
+          <dt>Status</dt>
+          <dd>{a.final_status === 'PENDING_HUMAN_GOVERNANCE_REVIEW' ? 'Pending governance review' : 'Completed'}</dd>
+        </div>
+        <div className="pair">
+          <dt>Engine</dt>
+          <dd>v{a.engine_version}</dd>
+        </div>
+        <div className="pair">
+          <dt>Input fingerprint</dt>
+          <dd>{a.input_fingerprint}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+/**
+ * The project's central design decision, stated where a reviewer will actually
+ * see it rather than only in the documentation.
+ */
+function DecisionSplit() {
+  return (
+    <div className="split">
+      <div>
+        <div className="who" style={{ color: 'var(--accent)' }}>
+          The model decides
+        </div>
+        <h4>Qualitative analysis and language</h4>
+        <ul>
+          <li>Which risks this specific system creates, and why</li>
+          <li>How an agent's authority could be misused</li>
+          <li>The wording of each remediation action</li>
+          <li>The business-language executive summary</li>
+          <li>The rationale attached to a governance mapping</li>
+        </ul>
+      </div>
+      <div>
+        <div className="who" style={{ color: 'var(--low)' }}>
+          Rules decide
+        </div>
+        <h4>Everything that has to be defended</h4>
+        <ul>
+          <li>The risk score, its three factors and the band</li>
+          <li>Every control status and severity</li>
+          <li>Every evidence status</li>
+          <li>Remediation priority and SLA</li>
+          <li>Whether human governance review is required</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ panels */
 
 function Overview({ r }: { r: AssessmentResult }) {
@@ -42,7 +131,10 @@ function Overview({ r }: { r: AssessmentResult }) {
                 {r.system.owner} · {r.system.department}
               </p>
             </div>
-            <Badge value={r.executive_summary.recommended_decision} />
+            <Badge value={r.executive_summary.recommended_decision}>
+              {DECISION_LABEL[r.executive_summary.recommended_decision] ??
+                r.executive_summary.recommended_decision.replace(/_/g, ' ')}
+            </Badge>
           </div>
 
           <div className="grid c3" style={{ marginTop: 20 }}>
@@ -63,10 +155,17 @@ function Overview({ r }: { r: AssessmentResult }) {
             })}
           </div>
 
-          <p className="mono" style={{ marginTop: 16, marginBottom: 0, fontSize: '0.76rem', color: 'var(--text-dim)' }}>
+          <p style={{ marginTop: 16, marginBottom: 0, fontSize: '0.87rem', color: 'var(--text-muted)' }}>
+            <strong style={{ color: BAND_COLOR[risk.band] }}>{risk.band}</strong> — {BAND_MEANING[risk.band]}
+          </p>
+          <p className="mono" style={{ marginTop: 8, marginBottom: 0, fontSize: '0.76rem', color: 'var(--text-dim)' }}>
             {risk.methodology.formula} · engine {risk.methodology.engine_version}
           </p>
         </Card>
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <DecisionSplit />
       </div>
 
       <div className="grid c2" style={{ marginTop: 20 }}>
@@ -84,7 +183,7 @@ function Overview({ r }: { r: AssessmentResult }) {
                     <Badge value={d.band} />
                   </span>
                 </div>
-                <Meter pct={d.score} band={d.band} />
+                <Meter pct={d.score} band={d.band} label={`${d.domain}: ${d.score} of 100, ${d.band}`} />
                 <p style={{ margin: '8px 0 0', fontSize: '0.81rem', color: 'var(--text-dim)' }}>
                   {d.drivers.slice(0, 3).join(' · ')}
                 </p>
@@ -135,31 +234,77 @@ function Overview({ r }: { r: AssessmentResult }) {
   );
 }
 
+const SEV_RANK: Record<string, number> = { CRITICAL: 0, HIGH: 1, MODERATE: 2, LOW: 3 };
+
+/**
+ * Findings grouped by risk category rather than one flat list, so a reviewer can
+ * route Privacy to the Privacy Office and Agentic AI Security to the security team
+ * without reading every entry. Categories are ordered by their worst finding.
+ */
 function Findings({ r }: { r: AssessmentResult }) {
+  const byCategory = new Map<string, typeof r.findings>();
+  for (const f of r.findings) {
+    const key = f.category || 'Other';
+    if (!byCategory.has(key)) byCategory.set(key, []);
+    byCategory.get(key)!.push(f);
+  }
+
+  const groups = [...byCategory.entries()]
+    .map(([category, items]) => ({
+      category,
+      items: [...items].sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity]),
+      worst: Math.min(...items.map((i) => SEV_RANK[i.severity])),
+    }))
+    .sort((a, b) => a.worst - b.worst || b.items.length - a.items.length);
+
   return (
-    <div className="grid" style={{ gap: 14 }}>
-      {r.findings.map((f) => (
-        <div className={`finding ${f.severity}`} key={f.id}>
-          <h4>
-            {f.title}
-            <Badge value={f.severity} />
-            <span className="badge neutral">{f.category}</span>
-            <span className="badge neutral">{f.source === 'ai' ? 'AI analysis' : 'rule-derived'}</span>
-          </h4>
-          <p style={{ margin: 0, fontSize: '0.91rem' }}>{f.finding}</p>
-          {f.business_impact && (
-            <div className="blk">
-              <span className="lbl">Business impact</span>
-              {f.business_impact}
-            </div>
-          )}
-          {f.recommendation && (
-            <div className="blk">
-              <span className="lbl">Recommendation</span>
-              {f.recommendation}
-            </div>
-          )}
-        </div>
+    <div className="grid" style={{ gap: 30 }}>
+      {groups.map((g) => (
+        <section key={g.category}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              paddingBottom: 9,
+              marginBottom: 14,
+              borderBottom: '1px solid var(--line)',
+            }}
+          >
+            <h3 style={{ fontSize: '1.02rem' }}>{g.category}</h3>
+            <Badge value={g.items[0].severity} />
+            <span className="mono" style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+              {g.items.length} finding{g.items.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          <div className="grid" style={{ gap: 14 }}>
+            {g.items.map((f) => (
+              <div className={`finding ${f.severity}`} key={f.id}>
+                <h4>
+                  {f.title}
+                  <Badge value={f.severity} />
+                  <span className="badge neutral">
+                    {f.source === 'ai' ? 'AI analysis' : 'rule-derived'}
+                  </span>
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.91rem' }}>{f.finding}</p>
+                {f.business_impact && (
+                  <div className="blk">
+                    <span className="lbl">Why it matters</span>
+                    {f.business_impact}
+                  </div>
+                )}
+                {f.recommendation && (
+                  <div className="blk">
+                    <span className="lbl">Recommendation</span>
+                    {f.recommendation}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );
@@ -400,7 +545,9 @@ export default function Results({ result }: { result: AssessmentResult }) {
 
   return (
     <div>
-      <div className="tabs" role="tablist">
+      <IdentityHeader r={result} />
+
+      <div className="tabs" role="tablist" aria-label="Assessment sections">
         {TABS.map((t) => {
           if (t === 'Agentic analysis' && !result.system.is_agent) return null;
           return (
