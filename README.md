@@ -596,6 +596,8 @@ executive report (downloadable as Markdown or printable to PDF), and the audit r
 
 ## 18. Limitations
 
+![What this does not claim](docs/images/limitations.png)
+
 - This is a **first-pass assessment tool**. It does not approve AI systems and does
   not replace a security review, a penetration test, or a privacy assessment.
 - It assesses **what the requesting team declares at intake**. It verifies no claim
