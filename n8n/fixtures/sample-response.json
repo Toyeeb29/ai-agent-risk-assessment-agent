@@ -1,0 +1,894 @@
+{
+  "assessment_id": "AIRA-20260826-ZT5NON",
+  "generated_at": "2026-08-26T16:41:08.911Z",
+  "schema_version": "1.0.0",
+  "system": {
+    "name": "Aurora Support Resolution Agent",
+    "owner": "D. Okafor, Director of Customer Operations",
+    "department": "Customer Operations",
+    "purpose": "Resolve tier-1 customer support tickets end to end without analyst involvement, including issuing account credits under a fixed threshold.",
+    "ai_type": "ai_agent",
+    "model_provider": "OpenAI GPT-4o via vendor SaaS platform",
+    "hosting": "third_party",
+    "is_agent": true,
+    "third_party": true
+  },
+  "risk": {
+    "score": 36,
+    "max_score": 64,
+    "band": "HIGH",
+    "factors": {
+      "impact": {
+        "value": 4,
+        "label": "Severe",
+        "drivers": [
+          "Data sensitivity modifier: 4/4",
+          "Human impact modifier: 4/4",
+          "Tool privilege modifier: 3/4",
+          "Combined 11/12 -> Impact 4/4"
+        ]
+      },
+      "likelihood": {
+        "value": 3,
+        "label": "High",
+        "drivers": [
+          "authentication: service account (+1)",
+          "authorization: role based (+1)",
+          "monitoring: basic (+1)",
+          "human approval: never (+2)",
+          "agent ingests content it does not control - prompt injection surface (+2)",
+          "Autonomy modifier: 4/4",
+          "Combined 11/19 -> Likelihood 3/4"
+        ]
+      },
+      "exposure": {
+        "value": 3,
+        "label": "High",
+        "drivers": [
+          "External exposure modifier: 3/4",
+          "Third-party dependency modifier: 3/4",
+          "Network access: egress restricted",
+          "Combined 6/9 -> Exposure 3/4"
+        ]
+      }
+    },
+    "modifiers": {
+      "autonomy": 4,
+      "tool_privilege": 3,
+      "data_sensitivity": 4,
+      "external_exposure": 3,
+      "human_impact": 4,
+      "third_party_dependency": 3
+    },
+    "domains": [
+      {
+        "domain": "Privacy",
+        "score": 100,
+        "band": "CRITICAL",
+        "drivers": [
+          "Processes personal information",
+          "Processes sensitive data",
+          "Training/retention use of submitted data unknown",
+          "High regulatory sensitivity",
+          "Can send outbound communications containing processed data",
+          "Data minimisation / retention control gap"
+        ]
+      },
+      {
+        "domain": "Security",
+        "score": 60,
+        "band": "HIGH",
+        "drivers": [
+          "Control weakness score 7/17",
+          "Prompt injection surface present",
+          "1 security control gap(s)"
+        ]
+      },
+      {
+        "domain": "Agentic Risk",
+        "score": 100,
+        "band": "CRITICAL",
+        "drivers": [
+          "Autonomy level: fully autonomous (4/4)",
+          "Tool privilege: 3/4",
+          "No human approval gate",
+          "Calls external APIs"
+        ]
+      },
+      {
+        "domain": "TPRM",
+        "score": 85,
+        "band": "CRITICAL",
+        "drivers": [
+          "External provider in scope: Aurora AI Inc.",
+          "Provider data-use terms not established",
+          "Sensitive or personal data leaves the organisation",
+          "No completed AI-specific vendor risk assessment",
+          "Provider supports a high-impact business process"
+        ]
+      },
+      {
+        "domain": "Governance",
+        "score": 77,
+        "band": "CRITICAL",
+        "drivers": [
+          "Business impact: high",
+          "High regulatory sensitivity",
+          "45,000 affected users",
+          "No human oversight gate defined"
+        ]
+      }
+    ],
+    "methodology": {
+      "formula": "Risk Score = Impact (1-4) x Likelihood (1-4) x Exposure (1-4), range 1-64",
+      "bands": [
+        {
+          "band": "LOW",
+          "range": "1-10"
+        },
+        {
+          "band": "MODERATE",
+          "range": "11-24"
+        },
+        {
+          "band": "HIGH",
+          "range": "25-47"
+        },
+        {
+          "band": "CRITICAL",
+          "range": "48-64"
+        }
+      ],
+      "engine_version": "1.0.0"
+    }
+  },
+  "findings": [
+    {
+      "id": "DF-01",
+      "title": "Least privilege for AI agent tool access",
+      "severity": "CRITICAL",
+      "category": "Authorization",
+      "finding": "Role-based access is in place, but the agent retains destructive or transactional permissions that are not scoped to individual tasks.",
+      "business_impact": "Limits what an incorrect classification can change to the ticket itself.",
+      "recommendation": "Replace the shared support application role with an agent-specific role scoped to the tier-1 queue: read ticket, append public comment, set status. Remove write access to customer account records.",
+      "source": "deterministic"
+    },
+    {
+      "id": "DF-02",
+      "title": "Human approval for high-impact agent actions",
+      "severity": "CRITICAL",
+      "category": "Human Oversight",
+      "finding": "The agent performs high-impact actions with no human approval gate at any point in the flow.",
+      "business_impact": "Stops incorrect credits and inappropriate replies from reaching customers.",
+      "recommendation": "Require explicit human approval for any account credit and for the first outbound reply on a ticket.",
+      "source": "deterministic"
+    },
+    {
+      "id": "DF-03",
+      "title": "Prompt injection resistance and input validation",
+      "severity": "CRITICAL",
+      "category": "AI Security",
+      "finding": "The agent ingests content it does not control, holds broad permissions and requires no approval. Injected instructions in that content could drive real actions.",
+      "business_impact": "Business impact not generated for this finding.",
+      "recommendation": "See remediation plan.",
+      "source": "deterministic"
+    },
+    {
+      "id": "DF-04",
+      "title": "Tool permission matrix / documented tool authorization",
+      "severity": "CRITICAL",
+      "category": "Authorization",
+      "finding": "The agent can invoke 5 tool(s) (Zendesk API (read/write tickets), Billing API (issue credits), Outbound email (customer replies), Knowledge base search, ...) without a documented matrix of which action each tool is permitted to perform.",
+      "business_impact": "Business impact not generated for this finding.",
+      "recommendation": "See remediation plan.",
+      "source": "deterministic"
+    },
+    {
+      "id": "DF-05",
+      "title": "Data minimisation, retention and training-use controls",
+      "severity": "CRITICAL",
+      "category": "Privacy",
+      "finding": "Sensitive or personal data is processed and it is not established whether the provider retains or trains on it.",
+      "business_impact": "Business impact not generated for this finding.",
+      "recommendation": "See remediation plan.",
+      "source": "deterministic"
+    },
+    {
+      "id": "DF-06",
+      "title": "Third-party AI risk assessment",
+      "severity": "CRITICAL",
+      "category": "Third-Party Risk Management",
+      "finding": "The system depends on Aurora AI Inc.. A completed AI-specific vendor risk assessment has not been provided.",
+      "business_impact": "Business impact not generated for this finding.",
+      "recommendation": "See remediation plan.",
+      "source": "deterministic"
+    },
+    {
+      "id": "DF-07",
+      "title": "Failure handling, rollback and agent disengagement",
+      "severity": "CRITICAL",
+      "category": "Resilience",
+      "finding": "The agent acts autonomously with no approval gate and no evidenced ability to halt, reverse or contain an incorrect action.",
+      "business_impact": "Business impact not generated for this finding.",
+      "recommendation": "See remediation plan.",
+      "source": "deterministic"
+    },
+    {
+      "id": "AG-02",
+      "title": "Least Privilege",
+      "severity": "CRITICAL",
+      "category": "Agentic AI Security",
+      "finding": "A misclassified ticket can drive a write to any record the support role can reach.",
+      "business_impact": "",
+      "recommendation": "Scope the agent role to the support queue with create-only ticket permissions.",
+      "source": "ai",
+      "agentic_dimension": "Least Privilege"
+    },
+    {
+      "id": "AG-03",
+      "title": "Human Oversight",
+      "severity": "CRITICAL",
+      "category": "Agentic AI Security",
+      "finding": "Incorrect credits and customer replies take effect with no review.",
+      "business_impact": "",
+      "recommendation": "Require approval for credits and for first-contact replies.",
+      "source": "ai",
+      "agentic_dimension": "Human Oversight"
+    },
+    {
+      "id": "AG-04",
+      "title": "Prompt Injection",
+      "severity": "HIGH",
+      "category": "Agentic AI Security",
+      "finding": "A crafted ticket could instruct the agent to issue a credit or leak another customer record.",
+      "business_impact": "",
+      "recommendation": "Isolate ticket content from instructions and allowlist tool calls per intent.",
+      "source": "ai",
+      "agentic_dimension": "Prompt Injection"
+    },
+    {
+      "id": "AF-01",
+      "title": "Customer personal data processed by an external provider under unestablished terms",
+      "severity": "HIGH",
+      "category": "Privacy",
+      "finding": "The agent submits customer account records and billing history to a third-party platform whose training and retention terms are recorded as unknown at intake.",
+      "business_impact": "Customer data may be retained or reused outside the organisation with no contractual limit.",
+      "recommendation": "Obtain and record the provider data-use terms before approval.",
+      "source": "ai"
+    },
+    {
+      "id": "AF-02",
+      "title": "Unreviewed outbound communication to customers",
+      "severity": "HIGH",
+      "category": "Business",
+      "finding": "The agent composes and sends customer-facing replies with no review step.",
+      "business_impact": "An incorrect or inappropriate reply reaches the customer directly and cannot be recalled.",
+      "recommendation": "Sample-review outbound replies and gate credits above a threshold.",
+      "source": "ai"
+    },
+    {
+      "id": "AG-01",
+      "title": "Agent Identity",
+      "severity": "MODERATE",
+      "category": "Agentic AI Security",
+      "finding": "Actions are attributable to the service, not to individual agent runs.",
+      "business_impact": "",
+      "recommendation": "Emit a per-run correlation identifier alongside the service identity.",
+      "source": "ai",
+      "agentic_dimension": "Agent Identity"
+    }
+  ],
+  "agentic_analysis": [
+    {
+      "dimension": "Agent Identity",
+      "status": "WEAK",
+      "observation": "A dedicated service account is used.",
+      "risk": "Actions are attributable to the service, not to individual agent runs.",
+      "recommendation": "Emit a per-run correlation identifier alongside the service identity."
+    },
+    {
+      "dimension": "Authorization",
+      "status": "UNKNOWN",
+      "observation": "Not established from the information provided at intake.",
+      "risk": "",
+      "recommendation": ""
+    },
+    {
+      "dimension": "Tool Access",
+      "status": "UNKNOWN",
+      "observation": "Not established from the information provided at intake.",
+      "risk": "",
+      "recommendation": ""
+    },
+    {
+      "dimension": "Least Privilege",
+      "status": "ABSENT",
+      "observation": "The agent holds the same application role as a human analyst.",
+      "risk": "A misclassified ticket can drive a write to any record the support role can reach.",
+      "recommendation": "Scope the agent role to the support queue with create-only ticket permissions."
+    },
+    {
+      "dimension": "Autonomy",
+      "status": "UNKNOWN",
+      "observation": "Not established from the information provided at intake.",
+      "risk": "",
+      "recommendation": ""
+    },
+    {
+      "dimension": "Human Oversight",
+      "status": "ABSENT",
+      "observation": "No approval gate exists for any action.",
+      "risk": "Incorrect credits and customer replies take effect with no review.",
+      "recommendation": "Require approval for credits and for first-contact replies."
+    },
+    {
+      "dimension": "Prompt Injection",
+      "status": "WEAK",
+      "observation": "Ticket text is placed directly into the model context.",
+      "risk": "A crafted ticket could instruct the agent to issue a credit or leak another customer record.",
+      "recommendation": "Isolate ticket content from instructions and allowlist tool calls per intent."
+    },
+    {
+      "dimension": "Tool Abuse",
+      "status": "UNKNOWN",
+      "observation": "Not established from the information provided at intake.",
+      "risk": "",
+      "recommendation": ""
+    },
+    {
+      "dimension": "Auditability",
+      "status": "UNKNOWN",
+      "observation": "Not established from the information provided at intake.",
+      "risk": "",
+      "recommendation": ""
+    },
+    {
+      "dimension": "Monitoring",
+      "status": "UNKNOWN",
+      "observation": "Not established from the information provided at intake.",
+      "risk": "",
+      "recommendation": ""
+    },
+    {
+      "dimension": "Failure Handling",
+      "status": "UNKNOWN",
+      "observation": "Not established from the information provided at intake.",
+      "risk": "",
+      "recommendation": ""
+    }
+  ],
+  "governance_mappings": [
+    {
+      "id": "GM-01",
+      "risk": "The agent can write to production customer records beyond its stated task.",
+      "governance_area": "Authorization",
+      "framework_reference": "NIST AI RMF MANAGE 2.2; OWASP LLM Top 10 - LLM06 Excessive Agency",
+      "recommended_control": "Least privilege for AI agent tool access",
+      "required_evidence": "IAM policy / access control configuration",
+      "rationale": "Authorization scope is the control that bounds what a misclassification can reach.",
+      "illustrative": true
+    },
+    {
+      "id": "GM-02",
+      "risk": "High-impact customer-facing actions take effect unreviewed.",
+      "governance_area": "Human Oversight",
+      "framework_reference": "NIST AI RMF GOVERN 3.2, MANAGE 2.4; NIST AI 600-1 - Human-AI Configuration",
+      "recommended_control": "Human approval for high-impact agent actions",
+      "required_evidence": "Human approval workflow documentation",
+      "rationale": "Human oversight is the compensating control where autonomy exceeds verification capability.",
+      "illustrative": true
+    },
+    {
+      "id": "GM-03",
+      "risk": "The agent ingests content it does not control, holds broad permissions and requires no approval. Injected instructions in that content could drive real actions.",
+      "governance_area": "AI Security",
+      "framework_reference": "OWASP LLM Top 10 - LLM01 Prompt Injection; NIST AI 600-1 - Information Security",
+      "recommended_control": "Prompt injection resistance and input validation",
+      "required_evidence": "Architecture diagram / data flow diagram",
+      "rationale": "Mapped from the control catalog based on the intake responses.",
+      "illustrative": true
+    },
+    {
+      "id": "GM-04",
+      "risk": "The agent can invoke 5 tool(s) (Zendesk API (read/write tickets), Billing API (issue credits), Outbound email (customer replies), Knowledge base search, ...) without a documented matrix of which action each tool is permitted to perform.",
+      "governance_area": "Authorization",
+      "framework_reference": "NIST AI RMF MAP 1.1, MANAGE 2.2",
+      "recommended_control": "Tool permission matrix / documented tool authorization",
+      "required_evidence": "Tool permission matrix",
+      "rationale": "Mapped from the control catalog based on the intake responses.",
+      "illustrative": true
+    },
+    {
+      "id": "GM-05",
+      "risk": "Sensitive or personal data is processed and it is not established whether the provider retains or trains on it.",
+      "governance_area": "Privacy",
+      "framework_reference": "NIST AI RMF MEASURE 2.10; NIST AI 600-1 - Data Privacy",
+      "recommended_control": "Data minimisation, retention and training-use controls",
+      "required_evidence": "Data retention policy / privacy assessment",
+      "rationale": "Mapped from the control catalog based on the intake responses.",
+      "illustrative": true
+    },
+    {
+      "id": "GM-06",
+      "risk": "The system depends on Aurora AI Inc.. A completed AI-specific vendor risk assessment has not been provided.",
+      "governance_area": "Third-Party Risk Management",
+      "framework_reference": "NIST AI RMF GOVERN 6.1, MANAGE 3.1; NIST AI 600-1 - Value Chain and Component Integration",
+      "recommended_control": "Third-party AI risk assessment",
+      "required_evidence": "Vendor security documentation / SOC 2 report",
+      "rationale": "Mapped from the control catalog based on the intake responses.",
+      "illustrative": true
+    },
+    {
+      "id": "GM-07",
+      "risk": "The agent acts autonomously with no approval gate and no evidenced ability to halt, reverse or contain an incorrect action.",
+      "governance_area": "Resilience",
+      "framework_reference": "NIST AI RMF MANAGE 2.3, MANAGE 2.4",
+      "recommended_control": "Failure handling, rollback and agent disengagement",
+      "required_evidence": "Incident response procedure",
+      "rationale": "Mapped from the control catalog based on the intake responses.",
+      "illustrative": true
+    },
+    {
+      "id": "GM-08",
+      "risk": "A service account provides an identity but does not by itself distinguish agent-initiated actions from other automation.",
+      "governance_area": "Identity & Access Management",
+      "framework_reference": "NIST AI RMF GOVERN 2.1; OWASP LLM Top 10 - LLM06 Excessive Agency",
+      "recommended_control": "AI agent identity and authentication",
+      "required_evidence": "Agent authorization model",
+      "rationale": "Mapped from the control catalog based on the intake responses.",
+      "illustrative": true
+    },
+    {
+      "id": "GM-09",
+      "risk": "Basic availability monitoring exists but there is no detection of anomalous agent behaviour or tool-use patterns.",
+      "governance_area": "Monitoring & Detection",
+      "framework_reference": "NIST AI RMF MEASURE 3.1, MANAGE 4.1",
+      "recommended_control": "Behavioural monitoring and anomaly detection",
+      "required_evidence": "Monitoring configuration",
+      "rationale": "Mapped from the control catalog based on the intake responses.",
+      "illustrative": true
+    },
+    {
+      "id": "GM-10",
+      "risk": "Egress is restricted but the allowlist has not been evidenced.",
+      "governance_area": "Security Engineering",
+      "framework_reference": "NIST AI RMF MEASURE 2.7",
+      "recommended_control": "Network egress restriction",
+      "required_evidence": "Network / egress configuration",
+      "rationale": "Mapped from the control catalog based on the intake responses.",
+      "illustrative": true
+    },
+    {
+      "id": "GM-11",
+      "risk": "A description was provided at intake, but formal model documentation and a signed-off risk assessment have not been supplied.",
+      "governance_area": "AI Governance",
+      "framework_reference": "NIST AI RMF GOVERN 1.3, MAP 2.2, MAP 5.1",
+      "recommended_control": "AI system documentation and pre-deployment risk assessment",
+      "required_evidence": "Model documentation / AI risk assessment",
+      "rationale": "Mapped from the control catalog based on the intake responses.",
+      "illustrative": true
+    }
+  ],
+  "control_gaps": [
+    {
+      "control_id": "AIC-02",
+      "control": "Least privilege for AI agent tool access",
+      "status": "GAP",
+      "severity": "CRITICAL",
+      "reason": "Role-based access is in place, but the agent retains destructive or transactional permissions that are not scoped to individual tasks.",
+      "recommendation": "",
+      "governance_area": "Authorization",
+      "framework_reference": "NIST AI RMF MANAGE 2.2; OWASP LLM Top 10 - LLM06 Excessive Agency",
+      "required_evidence": "IAM policy / access control configuration"
+    },
+    {
+      "control_id": "AIC-03",
+      "control": "Human approval for high-impact agent actions",
+      "status": "GAP",
+      "severity": "CRITICAL",
+      "reason": "The agent performs high-impact actions with no human approval gate at any point in the flow.",
+      "recommendation": "",
+      "governance_area": "Human Oversight",
+      "framework_reference": "NIST AI RMF GOVERN 3.2, MANAGE 2.4; NIST AI 600-1 - Human-AI Configuration",
+      "required_evidence": "Human approval workflow documentation"
+    },
+    {
+      "control_id": "AIC-07",
+      "control": "Prompt injection resistance and input validation",
+      "status": "GAP",
+      "severity": "CRITICAL",
+      "reason": "The agent ingests content it does not control, holds broad permissions and requires no approval. Injected instructions in that content could drive real actions.",
+      "recommendation": "",
+      "governance_area": "AI Security",
+      "framework_reference": "OWASP LLM Top 10 - LLM01 Prompt Injection; NIST AI 600-1 - Information Security",
+      "required_evidence": "Architecture diagram / data flow diagram"
+    },
+    {
+      "control_id": "AIC-08",
+      "control": "Tool permission matrix / documented tool authorization",
+      "status": "GAP",
+      "severity": "CRITICAL",
+      "reason": "The agent can invoke 5 tool(s) (Zendesk API (read/write tickets), Billing API (issue credits), Outbound email (customer replies), Knowledge base search, ...) without a documented matrix of which action each tool is permitted to perform.",
+      "recommendation": "",
+      "governance_area": "Authorization",
+      "framework_reference": "NIST AI RMF MAP 1.1, MANAGE 2.2",
+      "required_evidence": "Tool permission matrix"
+    },
+    {
+      "control_id": "AIC-10",
+      "control": "Data minimisation, retention and training-use controls",
+      "status": "GAP",
+      "severity": "CRITICAL",
+      "reason": "Sensitive or personal data is processed and it is not established whether the provider retains or trains on it.",
+      "recommendation": "",
+      "governance_area": "Privacy",
+      "framework_reference": "NIST AI RMF MEASURE 2.10; NIST AI 600-1 - Data Privacy",
+      "required_evidence": "Data retention policy / privacy assessment"
+    },
+    {
+      "control_id": "AIC-11",
+      "control": "Third-party AI risk assessment",
+      "status": "GAP",
+      "severity": "CRITICAL",
+      "reason": "The system depends on Aurora AI Inc.. A completed AI-specific vendor risk assessment has not been provided.",
+      "recommendation": "",
+      "governance_area": "Third-Party Risk Management",
+      "framework_reference": "NIST AI RMF GOVERN 6.1, MANAGE 3.1; NIST AI 600-1 - Value Chain and Component Integration",
+      "required_evidence": "Vendor security documentation / SOC 2 report"
+    },
+    {
+      "control_id": "AIC-12",
+      "control": "Failure handling, rollback and agent disengagement",
+      "status": "GAP",
+      "severity": "CRITICAL",
+      "reason": "The agent acts autonomously with no approval gate and no evidenced ability to halt, reverse or contain an incorrect action.",
+      "recommendation": "",
+      "governance_area": "Resilience",
+      "framework_reference": "NIST AI RMF MANAGE 2.3, MANAGE 2.4",
+      "required_evidence": "Incident response procedure"
+    },
+    {
+      "control_id": "AIC-01",
+      "control": "AI agent identity and authentication",
+      "status": "PARTIAL",
+      "severity": "MODERATE",
+      "reason": "A service account provides an identity but does not by itself distinguish agent-initiated actions from other automation.",
+      "recommendation": "",
+      "governance_area": "Identity & Access Management",
+      "framework_reference": "NIST AI RMF GOVERN 2.1; OWASP LLM Top 10 - LLM06 Excessive Agency",
+      "required_evidence": "Agent authorization model"
+    },
+    {
+      "control_id": "AIC-05",
+      "control": "Behavioural monitoring and anomaly detection",
+      "status": "PARTIAL",
+      "severity": "MODERATE",
+      "reason": "Basic availability monitoring exists but there is no detection of anomalous agent behaviour or tool-use patterns.",
+      "recommendation": "",
+      "governance_area": "Monitoring & Detection",
+      "framework_reference": "NIST AI RMF MEASURE 3.1, MANAGE 4.1",
+      "required_evidence": "Monitoring configuration"
+    },
+    {
+      "control_id": "AIC-09",
+      "control": "Network egress restriction",
+      "status": "PARTIAL",
+      "severity": "LOW",
+      "reason": "Egress is restricted but the allowlist has not been evidenced.",
+      "recommendation": "",
+      "governance_area": "Security Engineering",
+      "framework_reference": "NIST AI RMF MEASURE 2.7",
+      "required_evidence": "Network / egress configuration"
+    },
+    {
+      "control_id": "AIC-13",
+      "control": "AI system documentation and pre-deployment risk assessment",
+      "status": "PARTIAL",
+      "severity": "LOW",
+      "reason": "A description was provided at intake, but formal model documentation and a signed-off risk assessment have not been supplied.",
+      "recommendation": "",
+      "governance_area": "AI Governance",
+      "framework_reference": "NIST AI RMF GOVERN 1.3, MAP 2.2, MAP 5.1",
+      "required_evidence": "Model documentation / AI risk assessment"
+    },
+    {
+      "control_id": "AIC-04",
+      "control": "Agent activity logging and auditability",
+      "status": "PRESENT",
+      "severity": "LOW",
+      "reason": "Comprehensive logging of agent activity is in place.",
+      "recommendation": "",
+      "governance_area": "Auditability",
+      "framework_reference": "NIST AI RMF MEASURE 2.8, MANAGE 4.1",
+      "required_evidence": "Logging configuration"
+    },
+    {
+      "control_id": "AIC-06",
+      "control": "Secrets management for agent credentials",
+      "status": "PRESENT",
+      "severity": "LOW",
+      "reason": "Credentials are held in a managed secrets store.",
+      "recommendation": "",
+      "governance_area": "Security Engineering",
+      "framework_reference": "NIST AI RMF MEASURE 2.7; NIST AI 600-1 - Information Security",
+      "required_evidence": "Secrets management configuration"
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "evidence": "Agent authorization model",
+      "status": "MISSING",
+      "risk": "CRITICAL",
+      "owner": "Engineering / IAM",
+      "why_required": "Defines how the agent is identified and what identity its actions execute under."
+    },
+    {
+      "evidence": "Tool permission matrix",
+      "status": "MISSING",
+      "risk": "CRITICAL",
+      "owner": "Engineering",
+      "why_required": "Maps each tool the agent can invoke to the specific actions it is permitted to perform."
+    },
+    {
+      "evidence": "Human approval workflow documentation",
+      "status": "MISSING",
+      "risk": "CRITICAL",
+      "owner": "Business Owner",
+      "why_required": "Shows where a person is required in the loop and what they see before approving."
+    },
+    {
+      "evidence": "Data flow diagram",
+      "status": "MISSING",
+      "risk": "HIGH",
+      "owner": "Engineering",
+      "why_required": "Shows what data enters the model context and where model output travels, which drives both privacy and injection analysis."
+    },
+    {
+      "evidence": "IAM policy / access control configuration",
+      "status": "MISSING",
+      "risk": "HIGH",
+      "owner": "IAM / Platform",
+      "why_required": "Substantiates the least-privilege claim made at intake."
+    },
+    {
+      "evidence": "Monitoring configuration",
+      "status": "MISSING",
+      "risk": "HIGH",
+      "owner": "SecOps",
+      "why_required": "Determines whether abnormal agent behaviour would be detected."
+    },
+    {
+      "evidence": "Vendor security documentation / SOC 2 report",
+      "status": "MISSING",
+      "risk": "HIGH",
+      "owner": "TPRM",
+      "why_required": "Baseline assurance over the provider handling the organisation’s data."
+    },
+    {
+      "evidence": "Privacy assessment (DPIA / PIA)",
+      "status": "MISSING",
+      "risk": "HIGH",
+      "owner": "Privacy",
+      "why_required": "Required where personal data is processed by an automated system that can act on it."
+    },
+    {
+      "evidence": "AI risk assessment (pre-deployment sign-off)",
+      "status": "MISSING",
+      "risk": "HIGH",
+      "owner": "GRC",
+      "why_required": "The formal, human-approved record that this system was assessed and accepted before deployment."
+    },
+    {
+      "evidence": "Incident response procedure covering AI/agent failure",
+      "status": "MISSING",
+      "risk": "HIGH",
+      "owner": "SecOps",
+      "why_required": "Defines how an incorrect or manipulated agent action is detected, halted and reversed."
+    },
+    {
+      "evidence": "Data retention and deletion policy",
+      "status": "MISSING",
+      "risk": "MODERATE",
+      "owner": "Privacy / Legal",
+      "why_required": "Establishes how long prompts, outputs and tool results are retained by the provider and internally."
+    },
+    {
+      "evidence": "Model documentation (model card / system card)",
+      "status": "MISSING",
+      "risk": "MODERATE",
+      "owner": "AI Engineering",
+      "why_required": "Documents intended use, known limitations and evaluation results for the underlying model."
+    },
+    {
+      "evidence": "Logging configuration",
+      "status": "PARTIAL",
+      "risk": "HIGH",
+      "owner": "Engineering / SecOps",
+      "why_required": "Determines whether agent behaviour can be reconstructed during an investigation."
+    },
+    {
+      "evidence": "Architecture documentation",
+      "status": "PARTIAL",
+      "risk": "MODERATE",
+      "owner": "Engineering",
+      "why_required": "Establishes trust boundaries, where model context comes from, and which systems the AI can reach."
+    }
+  ],
+  "remediation_plan": [
+    {
+      "id": "REM-AIC-02",
+      "priority": "CRITICAL",
+      "sla": "Immediate",
+      "action": "Replace the shared support application role with an agent-specific role scoped to the tier-1 queue: read ticket, append public comment, set status. Remove write access to customer account records.",
+      "rationale": "The agent currently holds every permission a human analyst holds, far beyond its stated task.",
+      "owner": "Engineering + Security",
+      "linked_controls": [
+        "AIC-02"
+      ]
+    },
+    {
+      "id": "REM-AIC-03",
+      "priority": "CRITICAL",
+      "sla": "Immediate",
+      "action": "Require explicit human approval for any account credit and for the first outbound reply on a ticket.",
+      "rationale": "No action the agent takes is currently reviewed before it reaches a customer.",
+      "owner": "Business Owner + GRC",
+      "linked_controls": [
+        "AIC-03"
+      ]
+    },
+    {
+      "id": "REM-AIC-07",
+      "priority": "CRITICAL",
+      "sla": "Immediate",
+      "action": "Remediate: Prompt injection resistance and input validation",
+      "rationale": "The agent ingests content it does not control, holds broad permissions and requires no approval. Injected instructions in that content could drive real actions.",
+      "owner": "Security Engineering + AI Engineering",
+      "linked_controls": [
+        "AIC-07"
+      ]
+    },
+    {
+      "id": "REM-AIC-08",
+      "priority": "CRITICAL",
+      "sla": "Immediate",
+      "action": "Remediate: Tool permission matrix / documented tool authorization",
+      "rationale": "The agent can invoke 5 tool(s) (Zendesk API (read/write tickets), Billing API (issue credits), Outbound email (customer replies), Knowledge base search, ...) without a documented matrix of which action each tool is permitted to perform.",
+      "owner": "Engineering + Security",
+      "linked_controls": [
+        "AIC-08"
+      ]
+    },
+    {
+      "id": "REM-AIC-10",
+      "priority": "CRITICAL",
+      "sla": "Immediate",
+      "action": "Remediate: Data minimisation, retention and training-use controls",
+      "rationale": "Sensitive or personal data is processed and it is not established whether the provider retains or trains on it.",
+      "owner": "Privacy Office",
+      "linked_controls": [
+        "AIC-10"
+      ]
+    },
+    {
+      "id": "REM-AIC-11",
+      "priority": "CRITICAL",
+      "sla": "Immediate",
+      "action": "Remediate: Third-party AI risk assessment",
+      "rationale": "The system depends on Aurora AI Inc.. A completed AI-specific vendor risk assessment has not been provided.",
+      "owner": "TPRM",
+      "linked_controls": [
+        "AIC-11"
+      ]
+    },
+    {
+      "id": "REM-AIC-12",
+      "priority": "CRITICAL",
+      "sla": "Immediate",
+      "action": "Remediate: Failure handling, rollback and agent disengagement",
+      "rationale": "The agent acts autonomously with no approval gate and no evidenced ability to halt, reverse or contain an incorrect action.",
+      "owner": "Engineering + SecOps",
+      "linked_controls": [
+        "AIC-12"
+      ]
+    },
+    {
+      "id": "REM-EVIDENCE",
+      "priority": "HIGH",
+      "sla": "30 days",
+      "action": "Remediate: Evidence collection for approval decision",
+      "rationale": "10 high-value evidence artefact(s) required for an approval decision have not been provided: Agent authorization model; Tool permission matrix; Human approval workflow documentation; Data flow diagram; IAM policy / access control configuration; Monitoring configuration; Vendor security documentation / SOC 2 report; Privacy assessment (DPIA / PIA); AI risk assessment (pre-deployment sign-off); Incident response procedure covering AI/agent failure.",
+      "owner": "GRC (coordinating with named artefact owners)",
+      "linked_controls": []
+    },
+    {
+      "id": "REM-AIC-01",
+      "priority": "MEDIUM",
+      "sla": "60 days",
+      "action": "Remediate: AI agent identity and authentication",
+      "rationale": "A service account provides an identity but does not by itself distinguish agent-initiated actions from other automation.",
+      "owner": "IAM / Platform Engineering",
+      "linked_controls": [
+        "AIC-01"
+      ]
+    },
+    {
+      "id": "REM-AIC-05",
+      "priority": "MEDIUM",
+      "sla": "60 days",
+      "action": "Remediate: Behavioural monitoring and anomaly detection",
+      "rationale": "Basic availability monitoring exists but there is no detection of anomalous agent behaviour or tool-use patterns.",
+      "owner": "SecOps",
+      "linked_controls": [
+        "AIC-05"
+      ]
+    }
+  ],
+  "tprm": {
+    "vendor": "Aurora AI Inc.",
+    "vendor_risk_band": "HIGH",
+    "critical_findings": [
+      "Data-use and retention terms for submitted customer data are not established."
+    ],
+    "missing_evidence": [
+      "SOC 2 Type II report",
+      "Subprocessor list",
+      "AI-specific security addendum"
+    ],
+    "recommended_questions": [
+      "Do you train, fine-tune or evaluate models on customer submissions, and can that be contractually disabled?",
+      "What is the retention period for prompts, tool call arguments and model outputs?",
+      "Which subprocessors receive customer content, and in which jurisdictions?"
+    ],
+    "remediation": [
+      "Execute an AI addendum covering training use and retention before go-live."
+    ]
+  },
+  "executive_summary": {
+    "overall_risk": "HIGH",
+    "primary_risk": "The support assistant can change customer records and issue account credits without anyone reviewing the action, using the same broad permissions a human analyst holds.",
+    "top_risks": [
+      "Agent permissions far exceed its stated task",
+      "No human review before customer-facing actions",
+      "Ticket content can influence agent behaviour",
+      "Provider data-use terms not established"
+    ],
+    "top_recommendations": [
+      "Scope the agent role to the tier-1 queue",
+      "Require approval for credits and first replies",
+      "Isolate untrusted ticket content from instructions",
+      "Execute an AI addendum with the provider"
+    ],
+    "business_narrative": "The Aurora Support Resolution Agent resolves tier-1 support tickets end to end, including sending customer replies and issuing account credits. It does this with the same system permissions a human support analyst holds and without any review before an action takes effect, so a single misclassified ticket can change a customer record or move money. Ticket text also reaches the model directly, which means a customer can influence what the agent does. Roughly 45,000 customers are in scope, and the provider has not established what happens to the data submitted to it. The organisation should scope the agent permissions and add approval gates for credits and first replies before this is approved.",
+    "recommended_decision": "REQUIRES_GOVERNANCE_REVIEW",
+    "human_review_required": true
+  },
+  "audit_record": {
+    "assessment_id": "AIRA-20260826-ZT5NON",
+    "timestamp": "2026-08-26T16:41:08.911Z",
+    "system": "Aurora Support Resolution Agent",
+    "engine_version": "1.0.0",
+    "schema_version": "1.0.0",
+    "input_fingerprint": "fp_619e95cf",
+    "ai_model": "openai:gpt-4o-mini",
+    "stages_completed": [
+      "Deterministic Risk Engine",
+      "Control Gap Analysis",
+      "Evidence Gap Analysis",
+      "Risk Prioritization",
+      "AI Risk Analyst",
+      "Agentic AI Security Analyst",
+      "Governance Mapping Agent",
+      "Remediation Narrative Agent",
+      "Executive Summary Agent",
+      "TPRM Vendor Analyst"
+    ],
+    "degraded_stages": [],
+    "risk_score": 36,
+    "risk_band": "HIGH",
+    "control_gap_count": 7,
+    "evidence_gap_count": 12,
+    "final_status": "PENDING_HUMAN_GOVERNANCE_REVIEW"
+  },
+  "disclaimer": "This is an automated first-pass assessment intended to support, not replace, human governance review. Framework mappings are illustrative and do not constitute certification of compliance with NIST AI RMF, ISO/IEC 42001, or any other standard. All findings require validation against evidence before an approval decision."
+}

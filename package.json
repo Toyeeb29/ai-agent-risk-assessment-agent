@@ -1,0 +1,29 @@
+{
+  "name": "ai-agent-risk-assessment-agent",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AI Governance & GRC automation for agentic AI systems, orchestrated by self-hosted n8n.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "workflow:build": "node n8n/build-workflow.mjs",
+    "engine:test": "node n8n/test-engine.mjs",
+    "contract:test": "node n8n/test-contract.mjs",
+    "verify": "npm run engine:test && npm run contract:test && npm run build",
+    "smoke": "node n8n/smoke-test.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^6.1.0",
+    "typescript": "^5.6.3",
+    "vite": "^8.2.2"
+  }
+}
