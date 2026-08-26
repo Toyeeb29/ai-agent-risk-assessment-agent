@@ -11,9 +11,7 @@ Orchestrated end to end by **self-hosted n8n**.
 
 `Self-Hosted n8n` · `Agentic AI` · `AI Governance` · `GRC` · `NIST AI RMF` · `TPRM` · `Risk Automation`
 
-<!-- SCREENSHOT: uncomment once docs/images/results-overview.png exists.
-![Results dashboard](docs/images/results-overview.png)
--->
+![The case study front page](docs/images/portfolio-hero.png)
 
 ---
 
@@ -115,6 +113,8 @@ is good at — and nothing that has to be defended in a review meeting.
 
 ## 2. Problem
 
+![Traditional vs automated first-pass assessment](docs/images/problem-comparison.png)
+
 Organisations are rapidly adopting generative AI, AI assistants, AI agents,
 AI-powered SaaS and autonomous workflows. Governance functions are not scaling at the
 same rate.
@@ -166,12 +166,11 @@ Two consequences worth stating plainly in an interview:
 
 ## 4. Architecture
 
-<!-- SCREENSHOT: uncomment once docs/images/workflow-canvas.png exists.
 ![n8n workflow canvas](docs/images/workflow-canvas.png)
 
-*Seventeen nodes on self-hosted n8n. The `{ }` nodes are the deterministic engine; the
-rest are LLM stages and control flow.*
--->
+*The published workflow on self-hosted n8n after a successful run. The `{ }` nodes are
+the deterministic engine; the rest are LLM stages and control flow. Note the branch at
+`Valid Input?` — malformed submissions are rejected before any token is spent.*
 
 ```
                               GRC ANALYST
