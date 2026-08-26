@@ -152,17 +152,6 @@ a technical position into business risk.
 every control status, every evidence status, every severity, every remediation
 priority and SLA, and whether the assessment requires human governance review.
 
-Two consequences worth stating plainly in an interview:
-
-- The same submission always produces the same score. Two analysts assessing the same
-  system get the same answer, and a scoring change is a reviewable code change with a
-  version number attached.
-- No framework citation is ever model-generated. A hallucinated `MANAGE 4.7` in a GRC
-  artefact is indistinguishable from a real one to the person reading it, and it ends
-  up in a control library. So references come from a fixed catalog and the model only
-  writes the rationale.
-
----
 
 ## 4. Architecture
 
