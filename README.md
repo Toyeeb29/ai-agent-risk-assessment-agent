@@ -92,7 +92,7 @@ to do, as readable Markdown. Neither is buried in an exported workflow blob — 
 
 ## 1. Overview
 
-A GRC analyst is handed a request to deploy an AI agent. It can read internal
+A GRC analyst/engineer is handed a request to deploy an AI agent. It can read internal
 documents, query a database, send emails, create tickets, call external APIs, and act
 without approval for every individual task. Four questions have to be answered before
 it goes live:
@@ -174,7 +174,7 @@ the deterministic engine; the rest are LLM stages and control flow. Note the bra
 `Valid Input?` — malformed submissions are rejected before any token is spent.*
 
 ```
-                              GRC ANALYST
+                              GRC ANALYST/ENGINEER
                                    │
                           ┌────────▼────────┐
                           │   PORTFOLIO UI  │   React + Vite, static
